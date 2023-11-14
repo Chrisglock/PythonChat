@@ -121,7 +121,8 @@ def items_toStr(items):
     for item in str_items:
         ret = ret + artefactos[item] + "\n"
     return ret
-
+def handle_commands(comand):
+    return 0
     
 
 # Configuración del servidor
