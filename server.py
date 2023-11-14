@@ -9,8 +9,10 @@ artefactos = json.loads(artefactos)
 # Lista para almacenar los sockets de los clientes
 client_sockets = []
 usernames = {}
+user_to_socket = {}
 user_items = {}
-
+error_command_msg = "Ha ocurrido un error con el comando"
+emojis = {"smile": ":)","angry":">:C","combito": "Q--(’- ’Q)","larva":"(:o)OOOooo" }
 # Función para manejar la conexión de cada cliente
 def handle_client(client_socket, addr):
     print(f"Conexión aceptada desde {addr}")
@@ -22,10 +24,11 @@ def handle_client(client_socket, addr):
     #el primer mensaje es el username del usuario
     data = client_socket.recv(1024).decode('utf-8')
     #se crea el mensaje y se hace un broadcast a todos los users sobre la coneccion del usuario
-    connected_msg ="[SERVER] " + data +" Se ha conectado."
+    connected_msg =data +" Se ha conectado."
     sv_broadcast(connected_msg)
     #se guarda el username en el diccionario segun el socket
     usernames[client_socket] = data
+    user_to_socket[data] = client_socket
     set_client_items(client_socket)
     while True:
         # Espera a recibir datos del cliente
@@ -45,7 +48,11 @@ def handle_client(client_socket, addr):
         print(f"Mensaje de {usernames[client_socket]} {addr}: {data}")
 
         # Enviar el mensaje a todos los clientes
-        broadcast(data,client_socket)
+        if data[0]==":":
+            data1 = data.replace(":","")
+            handle_commands(data1,client_socket)
+        else:
+            broadcast(data,client_socket)
 
     # Cierra la conexión con el cliente y elimina su socket de la lista
     #print(f"Conexión cerrada con {addr}")
@@ -53,7 +60,7 @@ def handle_client(client_socket, addr):
     #client_socket.close()
 
 # Función para enviar un mensaje a todos los clientes menos al remitente
-def broadcast(message,sender):
+def broadcast(message,sender):#sender = sender socket
     message = usernames[sender] + ": " + message
     for client_socket in client_sockets:
         try:
@@ -100,28 +107,63 @@ def set_client_items(client_socket):
             client_socket.send(set_item_error_msg.encode('utf-8'))
         #check si existen los items
         if error == False:
-            for item in items:
-                if not (item<43 and item>0):
-                    set_item_error_msg = "El artefacto " + item + "no existe."
-                    client_socket.send(set_item_error_msg.encode('utf-8'))
-                    checked = False
-            if checked == True: 
-                item_str = items_toStr(items)
-                set_item_reask = "Estos son sus items?(acepta con 'si'):\n" + item_str
-                client_socket.send(set_item_reask.encode('utf-8'))
-                res = client_socket.recv(1024).decode('utf-8')
-                if res == "si" or res == "SI":
-                    user_items[client_socket] = items
-                    asigned = True
-                    setted_msg = "Sus items fueron asignados"
-                    client_socket.send(setted_msg.encode('utf-8'))
-def items_toStr(items):
+            #validaciones
+            if len(items)<=6:
+                for item in items:
+                    if not (item<43 and item>0):
+                        set_item_error_msg = "El artefacto " + item + "no existe."
+                        client_socket.send(set_item_error_msg.encode('utf-8'))
+                        checked = False
+                #
+                if checked == True: 
+                    item_str = items_toStr(items)
+                    set_item_reask = "Estos son sus items?(acepta con 'si'):\n" + item_str
+                    client_socket.send(set_item_reask.encode('utf-8'))
+                    res = client_socket.recv(1024).decode('utf-8')
+                    if res == "si" or res == "SI":
+                        user_items[client_socket] = items
+                        asigned = True
+                        setted_msg = "Sus items fueron asignados"
+                        client_socket.send(setted_msg.encode('utf-8'))
+def items_toStr(items):#items list de int
     str_items = map(str,items)
     ret = ""
     for item in str_items:
         ret = ret + artefactos[item] + "\n"
     return ret
-def handle_commands(comand):
+def priv_msg(usr_name_sender:str,usr_name_reciever:str,msg:str):
+    reciever_socket = user_to_socket[usr_name_reciever]
+    msg = "(PRIVADO) " + usr_name_sender + ": " + msg
+    reciever_socket.send(msg.encode('utf-8'))
+
+def handle_commands(command: str,requester_socket):
+    command = command.split()
+    if command[0] == "q":
+        exit()
+    elif command[0] == "p":
+        try:
+            sender = usernames[requester_socket]
+            priv_msg(sender,command[1],command[2])
+        except:
+            requester_socket.send(error_command_msg.encode('utf-8'))
+    elif command[0] == "u":
+        usernames_list = list(usernames.keys())
+        msg = ""
+        for user in usernames_list:
+            msg = msg + "°CONECTADO" +  user + "\n"
+        requester_socket.send(msg.encode('utf-8'))
+    elif command[0] == "smile":
+        em = emojis["smile"]
+        broadcast(em,requester_socket)
+    elif command[0] == "angry":
+        em = emojis["angry"]
+        broadcast(em,requester_socket)
+    elif command[0] == "combito":
+        em = emojis["combito"]
+        broadcast(em,requester_socket)
+    elif command[0] == "larva":
+        em = emojis["larva"]
+        broadcast(em,requester_socket)
     return 0
     
 
