@@ -11,8 +11,10 @@ client_sockets = []
 usernames = {}
 user_to_socket = {}
 user_items = {}
+in_trade = {}
 error_command_msg = "Ha ocurrido un error con el comando"
 emojis = {"smile": ":)","angry":">:C","combito": "Q--(’- ’Q)","larva":"(:o)OOOooo" }
+trade_lock = threading.Lock()
 # Función para manejar la conexión de cada cliente
 def handle_client(client_socket, addr):
     print(f"Conexión aceptada desde {addr}")
@@ -27,6 +29,7 @@ def handle_client(client_socket, addr):
     connected_msg =data +" Se ha conectado."
     sv_broadcast(connected_msg)
     #se guarda el username en el diccionario segun el socket
+    #falta validacion de usuarios repetidos
     usernames[client_socket] = data
     user_to_socket[data] = client_socket
     set_client_items(client_socket)
@@ -56,15 +59,15 @@ def handle_client(client_socket, addr):
 
     # Cierra la conexión con el cliente y elimina su socket de la lista
     #print(f"Conexión cerrada con {addr}")
-    #client_sockets.remove(client_socket)
-    #client_socket.close()
+    client_sockets.remove(client_socket)
+    client_socket.close()
 
 # Función para enviar un mensaje a todos los clientes menos al remitente
-def broadcast(message,sender):#sender = sender socket
-    message = usernames[sender] + ": " + message
+def broadcast(message,sender_socket):#sender = sender socket
+    message = usernames[sender_socket] + ": " + message
     for client_socket in client_sockets:
         try:
-            if client_socket != sender:
+            if client_socket != sender_socket:
                 client_socket.send(message.encode('utf-8'))
         except:
             # Si hay un error al enviar el mensaje, cierra la conexión con ese cliente
@@ -114,7 +117,7 @@ def set_client_items(client_socket):
                         set_item_error_msg = "El artefacto " + item + "no existe."
                         client_socket.send(set_item_error_msg.encode('utf-8'))
                         checked = False
-                #
+                ######
                 if checked == True: 
                     item_str = items_toStr(items)
                     set_item_reask = "Estos son sus items?(acepta con 'si'):\n" + item_str
@@ -127,9 +130,9 @@ def set_client_items(client_socket):
                         client_socket.send(setted_msg.encode('utf-8'))
 def items_toStr(items):#items list de int
     str_items = map(str,items)
-    ret = ""
+    ret = "\n"
     for item in str_items:
-        ret = ret + artefactos[item] + "\n"
+        ret = ret + artefactos[item] +" ID: " + item +  "\n"
     return ret
 def priv_msg(usr_name_sender:str,usr_name_reciever:str,msg:str):
     reciever_socket = user_to_socket[usr_name_reciever]
@@ -147,10 +150,10 @@ def handle_commands(command: str,requester_socket):
         except:
             requester_socket.send(error_command_msg.encode('utf-8'))
     elif command[0] == "u":
-        usernames_list = list(usernames.keys())
+        usernames_list = list(usernames.values())
         msg = ""
         for user in usernames_list:
-            msg = msg + "°CONECTADO" +  user + "\n"
+            msg = msg + "°CONECTADO -> " +  user + "\n"
         requester_socket.send(msg.encode('utf-8'))
     elif command[0] == "smile":
         em = emojis["smile"]
@@ -164,9 +167,35 @@ def handle_commands(command: str,requester_socket):
     elif command[0] == "larva":
         em = emojis["larva"]
         broadcast(em,requester_socket)
+    elif command[0] == "myitems":
+        msg = items_toStr(user_items[requester_socket])
+        requester_socket.send(msg.encode('utf-8'))
+    elif command[0] == "offer":
+        try:
+            objetive = user_to_socket[command[1]]
+            trade_item(requester_socket,objetive,command[2],command[3])
+        except:
+            requester_socket.send("error en trade".encode('utf-8'))
+    else:
+        requester_socket.send("comando desconocido\n".encode('utf-8'))
     return 0
-    
-
+def trade_item(requester,objetive,ritem,oitem):
+    #aplicar todas las validaciones
+    #el objetivo ya está en un trade, intente más tarde
+    #ambos users tienen los items
+    #ambos sockets se ponen en estado trading
+    #antes de aplicar el trade se pide validacion al objetivo
+    ritem = int(ritem)
+    oitem = int(oitem)
+    print(user_items[requester])
+    print(ritem)
+    user_items[requester].remove(ritem)
+    user_items[requester].append(oitem)
+    user_items[objetive].remove(oitem)
+    user_items[objetive].append(ritem)
+    requester.send("Tradeo hecho".encode('utf-8'))
+def trading_manager():
+    return 0
 # Configuración del servidor
 host = '127.0.0.1'
 port = 55555
