@@ -13,8 +13,8 @@ user_to_socket = {}
 user_items = {}
 in_trade = {}
 error_command_msg = "Ha ocurrido un error con el comando"
-emojis = {"smile": ":)","angry":">:C","combito": "Q--(’- ’Q)","larva":"(:o)OOOooo" }
-trade_lock = threading.Lock()
+emojis = {"smile": ":)","angry":">:C","combito": "O--(’- ’Q)","larva":"(:o)OOOooo" }
+mutex_trade = threading.Lock()
 # Función para manejar la conexión de cada cliente
 def handle_client(client_socket, addr):
     print(f"Conexión aceptada desde {addr}")
@@ -32,6 +32,7 @@ def handle_client(client_socket, addr):
     #falta validacion de usuarios repetidos
     usernames[client_socket] = data
     user_to_socket[data] = client_socket
+    in_trade[client_socket] = False
     set_client_items(client_socket)
     while True:
         # Espera a recibir datos del cliente
@@ -185,15 +186,29 @@ def trade_item(requester,objetive,ritem,oitem):
     #ambos users tienen los items
     #ambos sockets se ponen en estado trading
     #antes de aplicar el trade se pide validacion al objetivo
-    ritem = int(ritem)
-    oitem = int(oitem)
-    print(user_items[requester])
-    print(ritem)
-    user_items[requester].remove(ritem)
-    user_items[requester].append(oitem)
-    user_items[objetive].remove(oitem)
-    user_items[objetive].append(ritem)
-    requester.send("Tradeo hecho".encode('utf-8'))
+    
+    if in_trade[requester] == True:
+        requester.send("Tienes un tradeo pendiente".encode('utf-8'))
+        if in_trade[objetive] == True:
+            requester.send("El usuario objetivo ya está tradeando, intente mas tarde\n".encode('utf-8'))
+        else:
+            in_trade[requester] = True
+            in_trade[objetive] = True     
+            ritem = int(ritem)
+            oitem = int(oitem)
+            mutex_trade.acquire()
+            if ritem in user_items[requester] :
+                if oitem in user_items[objetive]:
+                    user_items[requester].remove(ritem)
+                    user_items[requester].append(oitem)
+                    user_items[objetive].remove(oitem)
+                    user_items[objetive].append(ritem)
+                    requester.send("Tradeo hecho".encode('utf-8'))
+                    in_trade[requester] = False
+                    in_trade[objetive] = False
+            else:
+                requester.send("No ".encode('utf-8'))
+            mutex_trade.release()
 def trading_manager():
     return 0
 # Configuración del servidor
