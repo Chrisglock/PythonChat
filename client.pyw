@@ -53,6 +53,7 @@ class Ventana(QtWidgets.QMainWindow):
             self.username = self.ui.user_text.text()
             send_message(f"{self.username}")
             self.ui.user_text.clear()
+            self.ui.setWindowTitle(f"Chat granjeros [{self.username}]")
         else:
             user_input = self.ui.user_text.text()
             self.ui.user_text.clear()
