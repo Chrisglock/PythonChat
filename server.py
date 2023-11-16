@@ -14,7 +14,7 @@ user_items = {}
 in_trade = {}
 trade_response = {}
 error_command_msg = "[SERVER] Ha ocurrido un error con el comando"
-emojis = {"smile": ":)","angry":">:C","combito": "O--(’- ’Q)","larva":"(:o)OOOooo" }
+emojis = {"smile": ":)","angry":">:C","combito": "O--(’- ’Q)","larva":"(:o)OOOooo","erai":"(╯°□°)--︻╦╤─ - - - " }
 success_trade_msg = "\nIntercambio exitoso!"
 reject_trade_msg = "\nIntercambio rechazadoX!"
 mutex_trade = threading.Lock()
@@ -27,7 +27,11 @@ def handle_client(client_socket, addr):
     bienvenida = "[SERVER] ¡Bienvenid@ al chat de Granjerxs!\n" + "Ingrese su nombre de usuario:\n" 
     client_socket.send(bienvenida.encode('utf-8'))
     #el primer mensaje es el username del usuario
-    data = client_socket.recv(1024).decode('utf-8')
+    try:
+        data = client_socket.recv(1024).decode('utf-8')
+    except:
+        print(f"Desconexion previa username {client_socket}")
+        return
     #se crea el mensaje y se hace un broadcast a todos los users sobre la coneccion del usuario
     connected_msg =data +" Se ha conectado."
     sv_broadcast(connected_msg)
@@ -37,7 +41,11 @@ def handle_client(client_socket, addr):
     user_to_socket[data] = client_socket
     in_trade[client_socket] = False
     trade_response[client_socket] = "no_response"
-    set_client_items(client_socket)
+    try:
+        data = set_client_items(client_socket)
+    except:
+        print(f"Desconexion durante set items {client_socket}")
+        return
     while True:
         # Espera a recibir datos del cliente
         try:
@@ -165,6 +173,9 @@ def handle_commands(command: str,requester_socket):
     elif command[0] == "larva":
         em = emojis["larva"]
         broadcast(em,requester_socket)
+    elif command[0] == "erai":
+        em = emojis["erai"]
+        broadcast(em,requester_socket)
     elif command[0] == "artefactos":
         msg = items_toStr(user_items[requester_socket])
         requester_socket.send(msg.encode('utf-8'))
@@ -208,7 +219,9 @@ def trade_item(requester,objetive,ritem,oitem):#se ejecuta  como un nuevo thread
             in_trade[requester] = True
             in_trade[objetive] = True     
             mutex_trade.release()
-            trade_msg = f"[SERVER] TRADE OFFER\n TU item: ID:{oitem} {artefactos[oitem]}\n POR item ID:{ritem} {artefactos[ritem]} DE {usernames[requester]}"
+            trade_msg = f"[SERVER] has hecho TRADE OFFER a {usernames[requester]}\n TU item: ID:{oitem} {artefactos[oitem]}\n POR item ID:{ritem} {artefactos[ritem]} DE {usernames[requester]}"
+            trade_msg_req = f"[SERVER] HAS OFRECIDO\n TU item: ID:{ritem} {artefactos[ritem]}\n POR item ID:{oitem} {artefactos[oitem]} DE {usernames[objetive]}"
+            requester.send(trade_msg_req.encode('utf-8'))
             objetive.send(trade_msg.encode('utf-8'))
             ############ busy waiting, se bloquea hasta que le llegue una respuesta
             while trade_response[objetive] != "accept" and trade_response[objetive] != "reject":

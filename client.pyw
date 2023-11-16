@@ -46,6 +46,7 @@ class Ventana(QtWidgets.QMainWindow):
 
         # Se conecta la señal del botón para enviar mensajes al servidor
         self.ui.user_text.returnPressed.connect(self.get_text)
+        self.ui.send.clicked.connect(self.get_text)
 
     @pyqtSlot()
     def get_text(self):
