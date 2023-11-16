@@ -30,8 +30,8 @@ class Ventana(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.ui = uic.loadUi('chat.ui')
+        self.ui.setWindowIcon(QtGui.QIcon('hat.png'))
         self.ui.show()
-
         self.current_chat = ""
         self.username = ""
 

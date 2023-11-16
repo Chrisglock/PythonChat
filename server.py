@@ -118,7 +118,7 @@ def set_client_items(client_socket):
                 ######
                 if checked == True: 
                     item_str = items_toStr(items)
-                    set_item_reask = "Estos son sus items?(acepta con 'si'):\n" + item_str
+                    set_item_reask = "Estos son sus items? si/no:\n" + item_str
                     client_socket.send(set_item_reask.encode('utf-8'))
                     res = client_socket.recv(1024).decode('utf-8')
                     if res == "si" or res == "SI":

@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Chat granjeros</string>
   </property>
   <property name="animated">
    <bool>false</bool>
