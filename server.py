@@ -14,9 +14,9 @@ user_items = {}
 in_trade = {}
 trade_response = {}
 error_command_msg = "[SERVER] Ha ocurrido un error con el comando"
-emojis = {"smile": ":)","angry":">:C","combito": "O--(’- ’Q)","larva":"(:o)OOOooo","erai":"(╯°□°)--︻╦╤─ - - - " }
-success_trade_msg = "\nIntercambio exitoso!"
-reject_trade_msg = "\nIntercambio rechazadoX!"
+emojis = {"smile": ":)","angry":">:C","combito": "O--(’- ’Q)","larva":"(:o)OOOooo","erai":"(╯°□°)--︻╦╤─ - - - ","?":"ಠ_ಠ_/¯ ?"}
+success_trade_msg = "\n[SERVER]: Intercambio exitoso!"
+reject_trade_msg = "\n[SERVER]: Intercambio rechazadoX!"
 mutex_trade = threading.Lock()
 # Función para manejar la conexión de cada cliente
 def handle_client(client_socket, addr):
@@ -219,8 +219,8 @@ def trade_item(requester,objetive,ritem,oitem):#se ejecuta  como un nuevo thread
             in_trade[requester] = True
             in_trade[objetive] = True     
             mutex_trade.release()
-            trade_msg = f"[SERVER] has hecho TRADE OFFER a {usernames[requester]}\n TU item: ID:{oitem} {artefactos[oitem]}\n POR item ID:{ritem} {artefactos[ritem]} DE {usernames[requester]}"
-            trade_msg_req = f"[SERVER] HAS OFRECIDO\n TU item: ID:{ritem} {artefactos[ritem]}\n POR item ID:{oitem} {artefactos[oitem]} DE {usernames[objetive]}"
+            trade_msg = f"[SERVER]: TRADE OFFER de {usernames[requester]}\n TU item: ID:{oitem} {artefactos[oitem]}\n POR item ID:{ritem} {artefactos[ritem]} DE {usernames[requester]}"
+            trade_msg_req = f"[SERVER]: HAS OFRECIDO\n TU item: ID:{ritem} {artefactos[ritem]}\n POR item ID:{oitem} {artefactos[oitem]} DE {usernames[objetive]}"
             requester.send(trade_msg_req.encode('utf-8'))
             objetive.send(trade_msg.encode('utf-8'))
             ############ busy waiting, se bloquea hasta que le llegue una respuesta
@@ -243,13 +243,13 @@ def trade_item(requester,objetive,ritem,oitem):#se ejecuta  como un nuevo thread
                         requester.send("\n[SERVER] objetivo no tiene el item".encode('utf-8'))
                 else:
                     requester.send("\n[SERVER] No tienes este item".encode('utf-8'))
-                trade_response[objetive] == "no_response"
+                trade_response[objetive] = "no_response"
                 requester.send(success_trade_msg.encode('utf-8'))
                 objetive.send(success_trade_msg.encode('utf-8'))
                 in_trade[requester] = False
                 in_trade[objetive] = False
             elif trade_response[objetive] == "reject":
-                trade_response[objetive] == "no_response"
+                trade_response[objetive] = "no_response"
                 in_trade[requester] = False
                 in_trade[objetive] = False
                 requester.send(reject_trade_msg.encode('utf-8'))
