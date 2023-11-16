@@ -55,18 +55,12 @@ def handle_client(client_socket, addr):
         # Imprime los datos recibidos y envía la respuesta a todos los clientes
         print(f"Mensaje de {usernames[client_socket]} {addr}: {data}")
 
-        # Enviar el mensaje a todos los clientes
+        # maneja el mensaje
         if data[0]==":":
             data1 = data.replace(":","")
             handle_commands(data1,client_socket)
         else:
             broadcast(data,client_socket)
-
-    # Cierra la conexión con el cliente y elimina su socket de la lista
-    #print(f"Conexión cerrada con {addr}")
-    client_sockets.remove(client_socket)
-    client_socket.close()
-
 # Función para enviar un mensaje a todos los clientes menos al remitente
 def broadcast(message,sender_socket):#sender = sender socket
     message = usernames[sender_socket] + ": " + message
@@ -172,9 +166,15 @@ def handle_commands(command: str,requester_socket):
     elif command[0] == "larva":
         em = emojis["larva"]
         broadcast(em,requester_socket)
-    elif command[0] == "myitems":
+    elif command[0] == "artefactos":
         msg = items_toStr(user_items[requester_socket])
         requester_socket.send(msg.encode('utf-8'))
+    elif command[0] == "artefacto":
+        try:
+            msg = f"[SERVER]: {artefactos[command[1]]}"
+            requester_socket.send(msg.encode('utf-8'))
+        except:
+            requester_socket.send("\nartefacto invalido".encode('utf-8'))
     elif command[0] == "offer":
         try:
             objetive = user_to_socket[command[1]]
@@ -197,12 +197,12 @@ def handle_commands(command: str,requester_socket):
             requester_socket.send("No estas en un trade".encode('utf-8'))
     else:
         requester_socket.send("comando desconocido\n".encode('utf-8'))
-def trade_item(requester,objetive,ritem,oitem):
+def trade_item(requester,objetive,ritem,oitem):#se ejecuta  como un nuevo thread
     #aplicar todas las validaciones
-    #el objetivo ya está en un trade, intente más tarde
-    #ambos users tienen los items
-    #ambos sockets se ponen en estado trading
-    #antes de aplicar el trade se pide validacion al objetivo
+        #el objetivo ya está en un trade, intente más tarde
+        #ambos users tienen los items
+        #ambos sockets se ponen en estado trading
+        #antes de aplicar el trade se pide validacion al objetivo
     if in_trade[requester] != True:
         if in_trade[objetive] != True:
             mutex_trade.acquire()#se pide el mutex 
@@ -211,11 +211,10 @@ def trade_item(requester,objetive,ritem,oitem):
             mutex_trade.release()
             trade_msg = f"TRADE OFFER\n TU item: ID:{oitem} {artefactos[oitem]}\n POR item ID:{ritem} {artefactos[ritem]} DE {usernames[requester]}"
             objetive.send(trade_msg.encode('utf-8'))
-            ############
+            ############ busy waiting, se bloquea hasta que le llegue una respuesta
             while trade_response[objetive] != "accept" and trade_response[objetive] != "reject":
                 pass#NADA XD
             ############
-            print("VALIDANDO RESPUESTA")
             if trade_response[objetive] == "accept":
                 mutex_trade.acquire()#se pide el mutex 
                 ritem = int(ritem)
@@ -237,11 +236,13 @@ def trade_item(requester,objetive,ritem,oitem):
                 objetive.send(success_trade_msg.encode('utf-8'))
                 in_trade[requester] = False
                 in_trade[objetive] = False
-                mutex_trade.release()
             elif trade_response[objetive] == "reject":
                 trade_response[objetive] == "no_response"
+                in_trade[requester] = False
+                in_trade[objetive] = False
                 requester.send(reject_trade_msg.encode('utf-8'))
                 objetive.send(reject_trade_msg.encode('utf-8'))
+            mutex_trade.release()
         else:
             requester.send("El usuario objetivo ya está tradeando, intente mas tarde\n".encode('utf-8'))
     else:

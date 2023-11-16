@@ -31,5 +31,5 @@ if username == "":
     send_message(username)
 while True:
     #print("Tú:") 
-    user_input = input("Tú:")
+    user_input = input()
     send_message(user_input)
