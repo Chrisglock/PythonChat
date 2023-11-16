@@ -24,7 +24,7 @@ def handle_client(client_socket, addr):
     # Agregar el socket del cliente a la lista
     client_sockets.append(client_socket)
     #envia msg de bienvenida al usuario
-    bienvenida = "¡Bienvenid@ al chat de Granjerxs!"
+    bienvenida = "¡Bienvenid@ al chat de Granjerxs!\n" + "Ingrese su nombre de usuario:\n" 
     client_socket.send(bienvenida.encode('utf-8'))
     #el primer mensaje es el username del usuario
     data = client_socket.recv(1024).decode('utf-8')
@@ -66,8 +66,7 @@ def broadcast(message,sender_socket):#sender = sender socket
     message = usernames[sender_socket] + ": " + message
     for client_socket in client_sockets:
         try:
-            if client_socket != sender_socket:
-                client_socket.send(message.encode('utf-8'))
+            client_socket.send(message.encode('utf-8'))
         except:
             # Si hay un error al enviar el mensaje, cierra la conexión con ese cliente
             client_sockets.remove(client_socket)
