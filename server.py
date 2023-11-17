@@ -13,10 +13,10 @@ user_to_socket = {}
 user_items = {}
 in_trade = {}
 trade_response = {}
-error_command_msg = "Ha ocurrido un error con el comando"
-emojis = {"smile": ":)","angry":">:C","combito": "O--(’- ’Q)","larva":"(:o)OOOooo" }
-success_trade_msg = "\nIntercambio exitoso!"
-reject_trade_msg = "\nIntercambio rechazadoX!"
+error_command_msg = "[SERVER] Ha ocurrido un error con el comando"
+emojis = {"smile": ":)","angry":">:C","combito": "O--(’- ’Q)","larva":"(:o)OOOooo","erai":"(╯°□°)--︻╦╤─ - - - ","?":"ಠ_ಠ_/¯ ?"}
+success_trade_msg = "\n[SERVER]: Intercambio exitoso!"
+reject_trade_msg = "\n[SERVER]: Intercambio rechazadoX!"
 mutex_trade = threading.Lock()
 # Función para manejar la conexión de cada cliente
 def handle_client(client_socket, addr):
@@ -24,10 +24,14 @@ def handle_client(client_socket, addr):
     # Agregar el socket del cliente a la lista
     client_sockets.append(client_socket)
     #envia msg de bienvenida al usuario
-    bienvenida = "¡Bienvenid@ al chat de Granjerxs!"
+    bienvenida = "[SERVER] ¡Bienvenid@ al chat de Granjerxs!\n" + "Ingrese su nombre de usuario:\n" 
     client_socket.send(bienvenida.encode('utf-8'))
     #el primer mensaje es el username del usuario
-    data = client_socket.recv(1024).decode('utf-8')
+    try:
+        data = client_socket.recv(1024).decode('utf-8')
+    except:
+        print(f"Desconexion previa username {client_socket}")
+        return
     #se crea el mensaje y se hace un broadcast a todos los users sobre la coneccion del usuario
     connected_msg =data +" Se ha conectado."
     sv_broadcast(connected_msg)
@@ -37,7 +41,11 @@ def handle_client(client_socket, addr):
     user_to_socket[data] = client_socket
     in_trade[client_socket] = False
     trade_response[client_socket] = "no_response"
-    set_client_items(client_socket)
+    try:
+        data = set_client_items(client_socket)
+    except:
+        print(f"Desconexion durante set items {client_socket}")
+        return
     while True:
         # Espera a recibir datos del cliente
         try:
@@ -45,13 +53,13 @@ def handle_client(client_socket, addr):
         except:
             #DESCONEXION
             dis_msg = usernames[client_socket] +" Se ha desconectado."
-            print("[SERVER] Cliente" + dis_msg)
+            print("[SERVER] Cliente " + dis_msg)
             client_sockets.remove(client_socket)
             client_socket.close()#ojo
             sv_broadcast(dis_msg)
-            break#cierra el thread para el cliente
+            return#cierra el thread para el cliente
         if not data:
-            break
+            return
         # Imprime los datos recibidos y envía la respuesta a todos los clientes
         print(f"Mensaje de {usernames[client_socket]} {addr}: {data}")
 
@@ -66,8 +74,7 @@ def broadcast(message,sender_socket):#sender = sender socket
     message = usernames[sender_socket] + ": " + message
     for client_socket in client_sockets:
         try:
-            if client_socket != sender_socket:
-                client_socket.send(message.encode('utf-8'))
+            client_socket.send(message.encode('utf-8'))
         except:
             # Si hay un error al enviar el mensaje, cierra la conexión con ese cliente
             client_sockets.remove(client_socket)
@@ -92,11 +99,11 @@ def items_toStr(items):
     
 def set_client_items(client_socket):
     asigned = False
-    checked = True
-    error = False
     while not asigned:
         #check si los items estan bien declarados
-        set_item_msg = "Cuentame, que artefactos tienes?"
+        error = False
+        checked = True
+        set_item_msg = "[SERVER] Cuentame, que artefactos tienes?"
         client_socket.send(set_item_msg.encode('utf-8'))
         try:
             items = client_socket.recv(1024).decode('utf-8')
@@ -105,7 +112,7 @@ def set_client_items(client_socket):
             error = False
         except:
             error = True
-            set_item_error_msg = "Ha asignado mal sus items, intentelo otra vez"
+            set_item_error_msg = "[SERVER] Ha asignado mal sus items, intentelo otra vez"
             client_socket.send(set_item_error_msg.encode('utf-8'))
         #check si existen los items
         if error == False:
@@ -113,19 +120,19 @@ def set_client_items(client_socket):
             if len(items)<=6:
                 for item in items:
                     if not (item<43 and item>0):
-                        set_item_error_msg = "El artefacto " + item + "no existe."
+                        set_item_error_msg = f"[SERVER] El artefacto {item} no existe."
                         client_socket.send(set_item_error_msg.encode('utf-8'))
                         checked = False
                 ######
                 if checked == True: 
                     item_str = items_toStr(items)
-                    set_item_reask = "Estos son sus items?(acepta con 'si'):\n" + item_str
+                    set_item_reask = "[SERVER] Estos son sus items? si/no:\n" + item_str
                     client_socket.send(set_item_reask.encode('utf-8'))
                     res = client_socket.recv(1024).decode('utf-8')
                     if res == "si" or res == "SI":
                         user_items[client_socket] = items
                         asigned = True
-                        setted_msg = "Sus items fueron asignados"
+                        setted_msg = "[SERVER] Sus items fueron asignados"
                         client_socket.send(setted_msg.encode('utf-8'))
 def items_toStr(items):#items list de int
     str_items = map(str,items)
@@ -166,6 +173,12 @@ def handle_commands(command: str,requester_socket):
     elif command[0] == "larva":
         em = emojis["larva"]
         broadcast(em,requester_socket)
+    elif command[0] == "erai":
+        em = emojis["erai"]
+        broadcast(em,requester_socket)
+    elif command[0] == "?":
+        em = emojis["?"]
+        broadcast(em,requester_socket)
     elif command[0] == "artefactos":
         msg = items_toStr(user_items[requester_socket])
         requester_socket.send(msg.encode('utf-8'))
@@ -174,7 +187,7 @@ def handle_commands(command: str,requester_socket):
             msg = f"[SERVER]: {artefactos[command[1]]}"
             requester_socket.send(msg.encode('utf-8'))
         except:
-            requester_socket.send("\nartefacto invalido".encode('utf-8'))
+            requester_socket.send("\n[SERVER] artefacto invalido".encode('utf-8'))
     elif command[0] == "offer":
         try:
             objetive = user_to_socket[command[1]]
@@ -182,71 +195,93 @@ def handle_commands(command: str,requester_socket):
                 trader_thread = threading.Thread(target=trade_item, args=(requester_socket,objetive,command[2],command[3]))
                 trader_thread.start()
             else:
-                requester_socket.send("error en trade".encode('utf-8'))
+                requester_socket.send("[SERVER] error en trade".encode('utf-8'))
         except:
-            requester_socket.send("error en trade".encode('utf-8'))
+            requester_socket.send("[SERVER] error en trade".encode('utf-8'))
     elif command[0] == "accept":
         if in_trade[requester_socket] == True:
             trade_response[requester_socket] = "accept"
         else:
-            requester_socket.send("No estas en un trade".encode('utf-8'))
+            requester_socket.send("[SERVER] No estas en un trade".encode('utf-8'))
     elif command[0] == "reject":
         if in_trade[requester_socket] == True:
             trade_response[requester_socket] = "reject"
         else:
-            requester_socket.send("No estas en un trade".encode('utf-8'))
+            requester_socket.send("[SERVER] No estas en un trade".encode('utf-8'))
     else:
-        requester_socket.send("comando desconocido\n".encode('utf-8'))
+        requester_socket.send("[SERVER] comando desconocido\n".encode('utf-8'))
 def trade_item(requester,objetive,ritem,oitem):#se ejecuta  como un nuevo thread
     #aplicar todas las validaciones
         #el objetivo ya está en un trade, intente más tarde
         #ambos users tienen los items
         #ambos sockets se ponen en estado trading
-        #antes de aplicar el trade se pide validacion al objetivo
+        #antes de aplicar el trade se pide validacwion al objetivo
     if in_trade[requester] != True:
         if in_trade[objetive] != True:
             mutex_trade.acquire()#se pide el mutex 
             in_trade[requester] = True
-            in_trade[objetive] = True     
+            in_trade[objetive] = True   
             mutex_trade.release()
-            trade_msg = f"TRADE OFFER\n TU item: ID:{oitem} {artefactos[oitem]}\n POR item ID:{ritem} {artefactos[ritem]} DE {usernames[requester]}"
-            objetive.send(trade_msg.encode('utf-8'))
+            str_ritem = ritem
+            str_oitem = oitem
+            ritem = int(ritem)
+            oitem = int(oitem)    
+
+            if ritem in user_items[requester]:
+                if oitem in user_items[objetive]:
+                    trade_msg = f"[SERVER]: TRADE OFFER de {usernames[requester]}\n TU item: ID:{oitem} {artefactos[str_oitem]}\n POR item ID:{ritem} {artefactos[str_ritem]} DE {usernames[requester]}"
+                    trade_msg_req = f"[SERVER]: HAS OFRECIDO\n TU item: ID:{ritem} {artefactos[str_ritem]}\n POR item ID:{oitem} {artefactos[str_oitem]} DE {usernames[objetive]}"
+                    requester.send(trade_msg_req.encode('utf-8'))
+                    objetive.send(trade_msg.encode('utf-8'))                
+                else:
+                    requester.send("\n[SERVER] objetivo no tiene el item".encode('utf-8'))
+                    mutex_trade.acquire()
+                    in_trade[requester] = False
+                    in_trade[objetive] = False
+                    mutex_trade.release()
+                    return
+            else:
+                requester.send("\n[SERVER] No tienes este item".encode('utf-8'))
+                mutex_trade.acquire()
+                in_trade[requester] = False
+                in_trade[objetive] = False
+                mutex_trade.release()
+                return
             ############ busy waiting, se bloquea hasta que le llegue una respuesta
             while trade_response[objetive] != "accept" and trade_response[objetive] != "reject":
                 pass#NADA XD
             ############
             if trade_response[objetive] == "accept":
                 mutex_trade.acquire()#se pide el mutex 
-                ritem = int(ritem)
-                oitem = int(oitem)
-                if ritem in user_items[requester]:
-                    if oitem in user_items[objetive]:
-                        #request aceptar o declinar trade
-                        user_items[requester].remove(ritem)
-                        user_items[requester].append(oitem)
-                        user_items[objetive].remove(oitem)
-                        user_items[objetive].append(ritem)
-                        requester.send("Tradeo hecho".encode('utf-8'))
-                    else:
-                        requester.send("\nobjetivo no tiene el item".encode('utf-8'))
-                else:
-                    requester.send("\nNo tienes este item".encode('utf-8'))
-                trade_response[objetive] == "no_response"
+                #ritem = int(ritem)
+                #oitem = int(oitem)
+
+                #request aceptar o declinar trade
+                user_items[requester].remove(ritem)
+                user_items[requester].append(oitem)
+                user_items[objetive].remove(oitem)
+                user_items[objetive].append(ritem)
+                requester.send("[SERVER] Tradeo hecho".encode('utf-8'))
+
+                trade_response[objetive] = "no_response"
                 requester.send(success_trade_msg.encode('utf-8'))
                 objetive.send(success_trade_msg.encode('utf-8'))
                 in_trade[requester] = False
                 in_trade[objetive] = False
+                mutex_trade.release()
+                
             elif trade_response[objetive] == "reject":
-                trade_response[objetive] == "no_response"
+                mutex_trade.acquire()#se pide el mutex 
+                trade_response[objetive] = "no_response"
                 in_trade[requester] = False
                 in_trade[objetive] = False
                 requester.send(reject_trade_msg.encode('utf-8'))
                 objetive.send(reject_trade_msg.encode('utf-8'))
-            mutex_trade.release()
+                mutex_trade.release()
         else:
-            requester.send("El usuario objetivo ya está tradeando, intente mas tarde\n".encode('utf-8'))
+            requester.send("[SERVER] El usuario objetivo ya está tradeando, intente mas tarde\n".encode('utf-8'))
     else:
-        requester.send("Tienes un tradeo pendiente".encode('utf-8'))
+        requester.send("[SERVER] Tienes un tradeo pendiente".encode('utf-8'))
     return
 # Configuración del servidor
 host = '127.0.0.1'
