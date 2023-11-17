@@ -176,6 +176,9 @@ def handle_commands(command: str,requester_socket):
     elif command[0] == "erai":
         em = emojis["erai"]
         broadcast(em,requester_socket)
+    elif command[0] == "?":
+        em = emojis["?"]
+        broadcast(em,requester_socket)
     elif command[0] == "artefactos":
         msg = items_toStr(user_items[requester_socket])
         requester_socket.send(msg.encode('utf-8'))
@@ -212,49 +215,69 @@ def trade_item(requester,objetive,ritem,oitem):#se ejecuta  como un nuevo thread
         #el objetivo ya está en un trade, intente más tarde
         #ambos users tienen los items
         #ambos sockets se ponen en estado trading
-        #antes de aplicar el trade se pide validacion al objetivo
+        #antes de aplicar el trade se pide validacwion al objetivo
     if in_trade[requester] != True:
         if in_trade[objetive] != True:
             mutex_trade.acquire()#se pide el mutex 
             in_trade[requester] = True
-            in_trade[objetive] = True     
+            in_trade[objetive] = True   
             mutex_trade.release()
-            trade_msg = f"[SERVER]: TRADE OFFER de {usernames[requester]}\n TU item: ID:{oitem} {artefactos[oitem]}\n POR item ID:{ritem} {artefactos[ritem]} DE {usernames[requester]}"
-            trade_msg_req = f"[SERVER]: HAS OFRECIDO\n TU item: ID:{ritem} {artefactos[ritem]}\n POR item ID:{oitem} {artefactos[oitem]} DE {usernames[objetive]}"
-            requester.send(trade_msg_req.encode('utf-8'))
-            objetive.send(trade_msg.encode('utf-8'))
+            str_ritem = ritem
+            str_oitem = oitem
+            ritem = int(ritem)
+            oitem = int(oitem)    
+
+            if ritem in user_items[requester]:
+                if oitem in user_items[objetive]:
+                    trade_msg = f"[SERVER]: TRADE OFFER de {usernames[requester]}\n TU item: ID:{oitem} {artefactos[str_oitem]}\n POR item ID:{ritem} {artefactos[str_ritem]} DE {usernames[requester]}"
+                    trade_msg_req = f"[SERVER]: HAS OFRECIDO\n TU item: ID:{ritem} {artefactos[str_ritem]}\n POR item ID:{oitem} {artefactos[str_oitem]} DE {usernames[objetive]}"
+                    requester.send(trade_msg_req.encode('utf-8'))
+                    objetive.send(trade_msg.encode('utf-8'))                
+                else:
+                    requester.send("\n[SERVER] objetivo no tiene el item".encode('utf-8'))
+                    mutex_trade.acquire()
+                    in_trade[requester] = False
+                    in_trade[objetive] = False
+                    mutex_trade.release()
+                    return
+            else:
+                requester.send("\n[SERVER] No tienes este item".encode('utf-8'))
+                mutex_trade.acquire()
+                in_trade[requester] = False
+                in_trade[objetive] = False
+                mutex_trade.release()
+                return
             ############ busy waiting, se bloquea hasta que le llegue una respuesta
             while trade_response[objetive] != "accept" and trade_response[objetive] != "reject":
                 pass#NADA XD
             ############
             if trade_response[objetive] == "accept":
                 mutex_trade.acquire()#se pide el mutex 
-                ritem = int(ritem)
-                oitem = int(oitem)
-                if ritem in user_items[requester]:
-                    if oitem in user_items[objetive]:
-                        #request aceptar o declinar trade
-                        user_items[requester].remove(ritem)
-                        user_items[requester].append(oitem)
-                        user_items[objetive].remove(oitem)
-                        user_items[objetive].append(ritem)
-                        requester.send("[SERVER] Tradeo hecho".encode('utf-8'))
-                    else:
-                        requester.send("\n[SERVER] objetivo no tiene el item".encode('utf-8'))
-                else:
-                    requester.send("\n[SERVER] No tienes este item".encode('utf-8'))
+                #ritem = int(ritem)
+                #oitem = int(oitem)
+
+                #request aceptar o declinar trade
+                user_items[requester].remove(ritem)
+                user_items[requester].append(oitem)
+                user_items[objetive].remove(oitem)
+                user_items[objetive].append(ritem)
+                requester.send("[SERVER] Tradeo hecho".encode('utf-8'))
+
                 trade_response[objetive] = "no_response"
                 requester.send(success_trade_msg.encode('utf-8'))
                 objetive.send(success_trade_msg.encode('utf-8'))
                 in_trade[requester] = False
                 in_trade[objetive] = False
+                mutex_trade.release()
+                
             elif trade_response[objetive] == "reject":
+                mutex_trade.acquire()#se pide el mutex 
                 trade_response[objetive] = "no_response"
                 in_trade[requester] = False
                 in_trade[objetive] = False
                 requester.send(reject_trade_msg.encode('utf-8'))
                 objetive.send(reject_trade_msg.encode('utf-8'))
-            mutex_trade.release()
+                mutex_trade.release()
         else:
             requester.send("[SERVER] El usuario objetivo ya está tradeando, intente mas tarde\n".encode('utf-8'))
     else:
