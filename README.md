@@ -22,7 +22,8 @@ sys: Módulo para acceder a variables y funciones específicas del sistema.
 PyQt6: Biblioteca para el desarrollo de interfaces gráficas en Qt.
 
 Configuración
-El cliente se conecta al servidor en 127.0.0.1 y el puerto 55555.
+El cliente se conecta por default al servidor en 127.0.0.1 y el puerto 55555.
+puedes configurarlo para tu lan conociendo tu ip.
 
 Uso
 Ejecuta el servidor mediante el comando python server.py.
