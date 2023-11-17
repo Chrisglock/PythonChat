@@ -33,7 +33,7 @@ def handle_client(client_socket, addr):
         print(f"Desconexion previa username {client_socket}")
         return
     #se crea el mensaje y se hace un broadcast a todos los users sobre la coneccion del usuario
-    connected_msg =data +" Se ha conectado."
+    connected_msg = data +" Se ha conectado."
     sv_broadcast(connected_msg)
     #se guarda el username en el diccionario segun el socket
     #falta validacion de usuarios repetidos
@@ -54,6 +54,7 @@ def handle_client(client_socket, addr):
             #DESCONEXION
             dis_msg = usernames[client_socket] +" Se ha desconectado."
             print("[SERVER] Cliente " + dis_msg)
+            del usernames[client_socket]
             client_sockets.remove(client_socket)
             client_socket.close()#ojo
             sv_broadcast(dis_msg)
