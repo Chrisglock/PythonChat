@@ -141,10 +141,12 @@ def items_toStr(items):#items list de int
     for item in str_items:
         ret = ret + artefactos[item] +" ID: " + item +  "\n"
     return ret
-def priv_msg(usr_name_sender:str,usr_name_reciever:str,msg:str):
+def priv_msg(usr_name_sender:str,usr_name_reciever:str,msg):
     reciever_socket = user_to_socket[usr_name_reciever]
-    msg = "(PRIVADO) " + usr_name_sender + ": " + msg
-    reciever_socket.send(msg.encode('utf-8'))
+    msg_out = "(PRIVADO) " + usr_name_sender + ": "
+    for i in msg:
+        msg_out = msg_out + " " + i 
+    reciever_socket.send(msg_out.encode('utf-8'))
 
 def handle_commands(command: str,requester_socket):
     command = command.split()
@@ -153,7 +155,7 @@ def handle_commands(command: str,requester_socket):
     elif command[0] == "p":
         try:
             sender = usernames[requester_socket]
-            priv_msg(sender,command[1],command[2])
+            priv_msg(sender,command[1],command[2:])
         except:
             requester_socket.send(error_command_msg.encode('utf-8'))
     elif command[0] == "u":
