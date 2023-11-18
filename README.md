@@ -16,10 +16,10 @@ Este proyecto implementa un sistema de chat en Python que permite la comunicaci�
 ## Dependencias
 
 Asegúrate de tener instaladas las siguientes dependencias antes de ejecutar el proyecto:
-socket: Módulo para la creación y manipulación de sockets.
-threading: Módulo para la creación de hilos para la recepción continua de mensajes.
-sys: Módulo para acceder a variables y funciones específicas del sistema.
-PyQt6: Biblioteca para el desarrollo de interfaces gráficas en Qt.
+- **socket**: Módulo para la creación y manipulación de sockets.
+- **threading**: Módulo para la creación de hilos para la recepción continua de mensajes.
+- **sys**: Módulo para acceder a variables y funciones específicas del sistema.
+- **PyQt6**: Biblioteca para el desarrollo de interfaces gráficas en Qt.
 
 Configuración
 El cliente se conecta por default al servidor en 127.0.0.1 y el puerto 55555.
